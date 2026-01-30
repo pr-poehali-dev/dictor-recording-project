@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Test audio conversion endpoint",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "files": [
+          {"name": "test.wav"},
+          {"name": "audio.wav"}
+        ],
+        "format": "mp3"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "totalConverted": 2
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "Test audio processing endpoint",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "files": [
+          {"name": "test.wav"},
+          {"name": "audio.wav"}
+        ],
+        "options": {
+          "normalize": true,
+          "noiseReduction": true,
+          "compression": true,
+          "trimSilence": true
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "totalProcessed": 2
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

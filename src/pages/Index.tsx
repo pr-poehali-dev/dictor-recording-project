@@ -43,27 +43,79 @@ export default function Index() {
 
   const selectedCount = recordings.filter(rec => rec.selected).length;
 
-  const handleDownload = (format: string) => {
+  const handleDownload = async (format: string) => {
     const selected = recordings.filter(rec => rec.selected);
     if (selected.length === 0) {
       toast.error('Выберите файлы для скачивания');
       return;
     }
-    toast.success(`Скачивание ${selected.length} файлов в формате ${format.toUpperCase()}`);
+    
+    const toastId = toast.loading(`Конвертация ${selected.length} файлов в ${format.toUpperCase()}...`);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/6cc407c4-fb9a-4358-9271-001178e619ff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          files: selected.map(rec => ({ name: rec.name })),
+          format: format
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(`Конвертировано ${data.totalConverted} файлов в ${format.toUpperCase()}`, { id: toastId });
+      } else {
+        toast.error('Ошибка конвертации', { id: toastId });
+      }
+    } catch (error) {
+      toast.error('Ошибка подключения к серверу', { id: toastId });
+    }
   };
 
-  const handleBatchProcess = () => {
+  const handleBatchProcess = async () => {
     const selected = recordings.filter(rec => rec.selected);
     if (selected.length === 0) {
       toast.error('Выберите файлы для обработки');
       return;
     }
+    
     setIsProcessing(true);
-    toast.loading(`Обработка ${selected.length} записей...`);
-    setTimeout(() => {
+    const toastId = toast.loading(`Обработка ${selected.length} записей...`);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/e11d56fc-d15e-41f0-a991-cdba9cf432f9', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          files: selected.map(rec => ({ name: rec.name })),
+          options: {
+            normalize: true,
+            noiseReduction: true,
+            compression: true,
+            trimSilence: true
+          }
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        let message = `Обработано ${data.totalProcessed} файлов:\n`;
+        data.results.forEach((result: any) => {
+          const change = result.stats.loudnessChange;
+          message += `\n${result.filename}: ${change > 0 ? '+' : ''}${change} dB`;
+        });
+        toast.success(message, { id: toastId, duration: 5000 });
+      } else {
+        toast.error('Ошибка обработки', { id: toastId });
+      }
+    } catch (error) {
+      toast.error('Ошибка подключения к серверу', { id: toastId });
+    } finally {
       setIsProcessing(false);
-      toast.success(`Обработано ${selected.length} файлов`);
-    }, 3000);
+    }
   };
 
   return (
