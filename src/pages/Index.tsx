@@ -5,7 +5,7 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 type Recording = {
   id: string;
