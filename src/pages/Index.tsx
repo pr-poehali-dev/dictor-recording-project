@@ -2,13 +2,69 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
+import { toast } from '@/components/ui/sonner';
+
+type Recording = {
+  id: string;
+  name: string;
+  duration: string;
+  size: string;
+  date: string;
+  selected: boolean;
+};
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('home');
   const [isRecording, setIsRecording] = useState(false);
   const [volume, setVolume] = useState([75]);
   const [normalize, setNormalize] = useState([0]);
+  const [recordings, setRecordings] = useState<Recording[]>([
+    { id: '1', name: 'Запись диктора 1.wav', duration: '00:03:45', size: '2.4 MB', date: '30.01.2024', selected: false },
+    { id: '2', name: 'Озвучка проект А.wav', duration: '00:05:12', size: '3.8 MB', date: '30.01.2024', selected: false },
+    { id: '3', name: 'Диктор рекламный ролик.wav', duration: '00:01:30', size: '1.2 MB', date: '29.01.2024', selected: false },
+    { id: '4', name: 'Подкаст эпизод 5.wav', duration: '00:12:45', size: '9.1 MB', date: '29.01.2024', selected: false },
+  ]);
+  const [convertFormat, setConvertFormat] = useState('mp3');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const toggleRecording = (id: string) => {
+    setRecordings(prev => prev.map(rec => 
+      rec.id === id ? { ...rec, selected: !rec.selected } : rec
+    ));
+  };
+
+  const toggleAll = () => {
+    const allSelected = recordings.every(rec => rec.selected);
+    setRecordings(prev => prev.map(rec => ({ ...rec, selected: !allSelected })));
+  };
+
+  const selectedCount = recordings.filter(rec => rec.selected).length;
+
+  const handleDownload = (format: string) => {
+    const selected = recordings.filter(rec => rec.selected);
+    if (selected.length === 0) {
+      toast.error('Выберите файлы для скачивания');
+      return;
+    }
+    toast.success(`Скачивание ${selected.length} файлов в формате ${format.toUpperCase()}`);
+  };
+
+  const handleBatchProcess = () => {
+    const selected = recordings.filter(rec => rec.selected);
+    if (selected.length === 0) {
+      toast.error('Выберите файлы для обработки');
+      return;
+    }
+    setIsProcessing(true);
+    toast.loading(`Обработка ${selected.length} записей...`);
+    setTimeout(() => {
+      setIsProcessing(false);
+      toast.success(`Обработано ${selected.length} файлов`);
+    }, 3000);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,6 +93,12 @@ export default function Index() {
                 className={`text-sm font-medium transition-colors ${activeTab === 'process' ? 'text-primary' : 'text-secondary-foreground/70 hover:text-secondary-foreground'}`}
               >
                 Обработка
+              </button>
+              <button 
+                onClick={() => setActiveTab('library')}
+                className={`text-sm font-medium transition-colors ${activeTab === 'library' ? 'text-primary' : 'text-secondary-foreground/70 hover:text-secondary-foreground'}`}
+              >
+                Библиотека
               </button>
             </div>
           </div>
@@ -331,6 +393,140 @@ export default function Index() {
                   <Icon name="Download" size={16} className="mr-2" />
                   Скачать MP3
                 </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'library' && (
+          <div className="animate-fade-in max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">Библиотека записей</h2>
+              <div className="flex gap-3">
+                <Button variant="outline">
+                  <Icon name="Upload" size={18} className="mr-2" />
+                  Загрузить файлы
+                </Button>
+              </div>
+            </div>
+
+            <Card className="p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      checked={recordings.every(rec => rec.selected)}
+                      onCheckedChange={toggleAll}
+                    />
+                    <span className="text-sm font-medium">
+                      {selectedCount > 0 ? `Выбрано: ${selectedCount}` : 'Выбрать все'}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedCount > 0 && (
+                  <div className="flex items-center gap-3">
+                    <Select value={convertFormat} onValueChange={setConvertFormat}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mp3">MP3</SelectItem>
+                        <SelectItem value="wav">WAV</SelectItem>
+                        <SelectItem value="aac">AAC</SelectItem>
+                        <SelectItem value="flac">FLAC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleDownload(convertFormat)}
+                    >
+                      <Icon name="Download" size={18} className="mr-2" />
+                      Скачать ({convertFormat.toUpperCase()})
+                    </Button>
+
+                    <Button 
+                      onClick={handleBatchProcess}
+                      disabled={isProcessing}
+                    >
+                      <Icon name="Wand2" size={18} className="mr-2" />
+                      Обработать все
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {recordings.map((rec) => (
+                  <div 
+                    key={rec.id}
+                    className={`border rounded-lg p-4 transition-colors ${
+                      rec.selected ? 'bg-primary/5 border-primary' : 'bg-card hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <Checkbox 
+                        checked={rec.selected}
+                        onCheckedChange={() => toggleRecording(rec.id)}
+                      />
+                      
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Icon name="FileAudio" size={24} className="text-primary" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{rec.name}</p>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Icon name="Clock" size={14} />
+                            {rec.duration}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Icon name="HardDrive" size={14} />
+                            {rec.size}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Icon name="Calendar" size={14} />
+                            {rec.date}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline">
+                          <Icon name="Play" size={16} className="mr-1" />
+                          Слушать
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Icon name="Download" size={16} />
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Icon name="MoreVertical" size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-muted/30">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-1">{recordings.length}</div>
+                  <p className="text-sm text-muted-foreground">Всего записей</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-accent mb-1">
+                    {recordings.reduce((acc, rec) => acc + parseFloat(rec.size), 0).toFixed(1)} MB
+                  </div>
+                  <p className="text-sm text-muted-foreground">Общий размер</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-1">{selectedCount}</div>
+                  <p className="text-sm text-muted-foreground">Выбрано файлов</p>
+                </div>
               </div>
             </Card>
           </div>
